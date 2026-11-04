@@ -68,6 +68,15 @@ jobs:
         run: |
           docker run --rm flask-cicd-demo:ci python -c "import setuptools; print('setuptools:', setuptools.__version__, setuptools.__file__)"
 
+      - name: Locate setuptools metadata in image
+        run: |
+          docker run --rm --user 0 --entrypoint sh flask-cicd-demo:ci -c '
+            echo "Setuptools distribution metadata:"
+            find /usr/local /usr/lib -type f -path "*/setuptools-*.dist-info/METADATA" -exec grep -H "^Version:" {} \; 2>/dev/null || true
+            echo "Debian setuptools package:"
+            dpkg-query -W -f="${Version}\n" python3-setuptools 2>/dev/null || true
+          '
+
       - name: Scan image with Trivy
         run: |
           docker run --rm \
