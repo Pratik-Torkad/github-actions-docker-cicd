@@ -64,17 +64,40 @@ jobs:
           push: false
           tags: flask-cicd-demo:ci
 
+      - name: Verify runtime package versions
+        run: |
+          docker run --rm flask-cicd-demo:ci python -c "import setuptools; print('setuptools:', setuptools.__version__, setuptools.__file__)"
+
       - name: Scan image with Trivy
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$HOME/.cache/trivy:/root/.cache/" \
+            -v "$PWD:/work" -w /work \
             aquasec/trivy:0.70.0 image \
             --scanners vuln \
             --ignore-unfixed \
-            --exit-code 1 \
+            --format json \
+            --output /work/trivy-report.json \
+            --exit-code 0 \
             --severity HIGH,CRITICAL \
             flask-cicd-demo:ci
+          echo "High/Critical vulnerabilities found by Trivy:"
+          jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL") | [.PkgName, .InstalledVersion, .VulnerabilityID, (.PkgPath // "path unavailable")] | @tsv' trivy-report.json
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' trivy-report.json)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Trivy found $COUNT HIGH/CRITICAL vulnerability record(s)."
+            exit 1
+          fi
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: trivy-image-report
+          path: trivy-report.json
+          if-no-files-found: ignore
+          retention-days: 7
 
   publish:
     name: Publish image to GitHub Container Registry
