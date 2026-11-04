@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN python -m pip install --no-cache-dir --upgrade pip \
+RUN python -m pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" \
     && python -m pip install --no-cache-dir -r requirements.txt \
     && groupadd --system --gid 10001 appgroup \
     && useradd --system --uid 10001 --gid appgroup --home-dir /app appuser
