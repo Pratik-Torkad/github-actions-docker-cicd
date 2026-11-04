@@ -65,15 +65,16 @@ jobs:
           tags: flask-cicd-demo:ci
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: image
-          image-ref: flask-cicd-demo:ci
-          format: table
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/" \
+            aquasec/trivy:0.70.0 image \
+            --scanners vuln \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --severity HIGH,CRITICAL \
+            flask-cicd-demo:ci
 
   publish:
     name: Publish image to GitHub Container Registry
